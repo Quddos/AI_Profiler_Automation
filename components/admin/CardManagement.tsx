@@ -1,11 +1,10 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -13,172 +12,169 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Progress } from "@/components/ui/progress"
-import { Plus, Edit, Trash, Loader2, FileText } from "lucide-react"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Plus, Edit, Trash, Loader2, FileText } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CardDetail {
-  field_name: string
-  field_value: string
-  file_url?: string
+  field_name: string;
+  field_value: string;
+  file_url?: string;
 }
 
 interface CardData {
-  id: number
-  title: string
-  description: string
-  type: string
-  progress: number
-  assigned_user_id: number | null
-  assigned_user_name?: string
-  assigned_user_email?: string
-  details: CardDetail[]
-  files: { id: number; file_name: string; file_url: string }[]
+  id: number;
+  title: string;
+  description: string;
+  type: string;
+  progress: number;
+  assigned_user_id: number | null;
+  assigned_user_name?: string;
+  assigned_user_email?: string;
+  details: CardDetail[];
+  files: { id: number; file_name: string; file_url: string }[];
 }
 
 interface UserData {
-  id: number
-  name: string
-  email: string
-  role: string
+  id: number;
+  name: string;
+  email: string;
+  role: string;
 }
 
 export function CardManagement() {
-  const [cards, setCards] = useState<CardData[]>([])
-  const [users, setUsers] = useState<UserData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [currentCard, setCurrentCard] = useState<CardData | null>(null)
+  const [cards, setCards] = useState<CardData[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentCard, setCurrentCard] = useState<CardData | null>(null);
 
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [type, setType] = useState("")
-  const [progress, setProgress] = useState(0)
-  const [assignedUserId, setAssignedUserId] = useState<string | null>(null)
-  const [cardDetails, setCardDetails] = useState<CardDetail[]>([])
-  const [cardFiles, setCardFiles] = useState<{ id: number; file_name: string; file_url: string }[]>([])
-  const [uploading, setUploading] = useState(false)
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [type, setType] = useState<string | undefined>(undefined);
+  const [progress, setProgress] = useState(0);
+  const [assignedUserId, setAssignedUserId] = useState<string | null>(null);
+  const [cardDetails, setCardDetails] = useState<CardDetail[]>([]);
+  const [cardFiles, setCardFiles] = useState<{ id: number; file_name: string; file_url: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    fetchCards()
-    fetchUsers()
-  }, [])
+    fetchCards();
+    fetchUsers();
+  }, []);
 
   const fetchCards = async () => {
-    setLoading(true)
-    setError("")
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch("/api/cards")
+      const response = await fetch("/api/cards");
       if (response.ok) {
-        const data = await response.json()
-        setCards(data.cards)
+        const data = await response.json();
+        setCards(data.cards);
       } else {
-        setError("Failed to fetch cards.")
+        setError("Failed to fetch cards.");
       }
     } catch (err) {
-      setError("An error occurred while fetching cards.")
-      console.error(err)
+      setError("An error occurred while fetching cards.");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/users")
+      const response = await fetch("/api/users");
       if (response.ok) {
-        const data = await response.json()
-        setUsers(data.users)
+        const data = await response.json();
+        setUsers(data.users);
       } else {
-        setError("Failed to fetch users.")
+        setError("Failed to fetch users.");
       }
     } catch (err) {
-      setError("An error occurred while fetching users.")
-      console.error(err)
+      setError("An error occurred while fetching users.");
+      console.error(err);
     }
-  }
+  };
 
   const handleAddCard = () => {
-    setCurrentCard(null)
-    setTitle("")
-    setDescription("")
-    setType("")
-    setProgress(0)
-    setAssignedUserId(null)
-    setCardDetails([])
-    setCardFiles([])
-    setIsModalOpen(true)
-  }
+    setCurrentCard(null);
+    setTitle("");
+    setDescription("");
+    setType(undefined);
+    setProgress(0);
+    setAssignedUserId(null);
+    setCardDetails([]);
+    setCardFiles([]);
+    setIsModalOpen(true);
+  };
 
   const handleEditCard = async (card: CardData) => {
-    setLoading(true)
-    setError("")
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch(`/api/cards/${card.id}`)
+      const response = await fetch(`/api/cards/${card.id}`);
       if (response.ok) {
-        const data = await response.json()
-        const fullCard = data.card
-        setCurrentCard(fullCard)
-        setTitle(fullCard.title)
-        setDescription(fullCard.description)
-        setType(fullCard.type)
-        setProgress(fullCard.progress)
-        setAssignedUserId(fullCard.assigned_user_id ? String(fullCard.assigned_user_id) : null)
-        setCardDetails(fullCard.details || [])
-        setCardFiles(fullCard.files || [])
-        setIsModalOpen(true)
+        const data = await response.json();
+        const fullCard = data.card;
+        setCurrentCard(fullCard);
+        setTitle(fullCard.title);
+        setDescription(fullCard.description);
+        setType(fullCard.type);
+        setProgress(fullCard.progress);
+        setAssignedUserId(fullCard.assigned_user_id ? String(fullCard.assigned_user_id) : null);
+        setCardDetails(fullCard.details || []);
+        setCardFiles(fullCard.files || []);
+        setIsModalOpen(true);
       } else {
-        setError("Failed to fetch card details for editing.")
+        setError("Failed to fetch card details for editing.");
       }
     } catch (err) {
-      setError("An error occurred while fetching card details.")
-      console.error(err)
+      setError("An error occurred while fetching card details.");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDeleteCard = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this card?")) return
-    setLoading(true)
-    setError("")
+    if (!confirm("Are you sure you want to delete this card?")) return;
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch(`/api/cards/${id}`, { method: "DELETE" })
+      const response = await fetch(`/api/cards/${id}`, { method: "DELETE" });
       if (response.ok) {
-        fetchCards()
+        fetchCards();
       } else {
-        setError("Failed to delete card.")
+        setError("Failed to delete card.");
       }
     } catch (err) {
-      setError("An error occurred while deleting card.")
-      console.error(err)
+      setError("An error occurred while deleting card.");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-
-
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Validate card type before sending to backend
     if (!type) {
-      setError("Please select newfrontend item in the list");
+      setError("Please select item in the list");
       setLoading(false);
       return;
     }
 
-    const assignedId = assignedUserId === "null" ? null : assignedUserId ? Number.parseInt(assignedUserId) : null;
-
+    const assignedId =
+      assignedUserId === "null" ? null : assignedUserId ? Number(assignedUserId) : null;
 
     const method = currentCard ? "PUT" : "POST";
     const url = currentCard ? `/api/cards/${currentCard.id}` : "/api/cards";
@@ -192,7 +188,7 @@ export function CardManagement() {
           description,
           type,
           progress,
-          assignedUserId: assignedUserId === "null" ? null : assignedUserId ? Number.parseInt(assignedUserId) : null,
+          assignedUserId: assignedId,
           details: cardDetails,
           files: cardFiles,
         }),
@@ -213,76 +209,72 @@ export function CardManagement() {
     }
   };
 
-
   const handleDetailChange = (index: number, field: keyof CardDetail, value: string) => {
-    const newDetails = [...cardDetails]
-    newDetails[index] = { ...newDetails[index], [field]: value }
-    setCardDetails(newDetails)
-  }
+    const newDetails = [...cardDetails];
+    newDetails[index] = { ...newDetails[index], [field]: value };
+    setCardDetails(newDetails);
+  };
 
   const addDetailField = () => {
-    setCardDetails([...cardDetails, { field_name: "", field_value: "" }])
-  }
+    setCardDetails([...cardDetails, { field_name: "", field_value: "" }]);
+  };
 
   const removeDetailField = (index: number) => {
-    setCardDetails(cardDetails.filter((_, i) => i !== index))
-  }
+    setCardDetails(cardDetails.filter((_, i) => i !== index));
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0 || !currentCard) return
+    const files = e.target.files;
+    if (!files || files.length === 0 || !currentCard) return;
 
-    setUploading(true)
-    setError("")
+    setUploading(true);
+    setError("");
 
     try {
-      const uploadedFiles: { id: number; file_name: string; file_url: any }[] = []
+      const uploadedFiles: { id: number; file_name: string; file_url: string }[] = [];
       for (let i = 0; i < files.length; i++) {
-        const file = files[i]
+        const file = files[i];
         const response = await fetch(`/api/upload?filename=${file.name}&cardId=${currentCard.id}`, {
           method: "POST",
           body: file,
-        })
+        });
 
         if (response.ok) {
-          const blob = await response.json()
-          uploadedFiles.push({ id: Date.now() + i, file_name: file.name, file_url: blob.url })
+          const blob = await response.json();
+          uploadedFiles.push({ id: Date.now() + i, file_name: file.name, file_url: blob.url });
         } else {
-          const errorData = await response.json()
-          setError(`Failed to upload ${file.name}: ${errorData.message || "Unknown error"}`)
-          break // Stop on first error
+          const errorData = await response.json();
+          setError(`Failed to upload ${file.name}: ${errorData.message || "Unknown error"}`);
+          break;
         }
       }
-      setCardFiles((prevFiles) => [...prevFiles, ...uploadedFiles])
+      setCardFiles((prevFiles) => [...prevFiles, ...uploadedFiles]);
     } catch (err) {
-      setError("An error occurred during file upload.")
-      console.error(err)
+      setError("An error occurred during file upload.");
+      console.error(err);
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
-  }
+  };
 
-  const handleRemoveFile = async (fileId: number, fileUrl: string) => {
-    if (!confirm("Are you sure you want to remove this file?")) return
-    setLoading(true)
-    setError("")
+  const handleRemoveFile = async (fileId: number) => {
+    if (!confirm("Are you sure you want to remove this file?")) return;
+    setLoading(true);
+    setError("");
     try {
-      // Assuming a DELETE endpoint for files, or handling removal via card update
-      // For simplicity, we'll just remove it from the state and rely on card update to sync
-      // A real app would have a dedicated /api/files/[id] DELETE endpoint
-      const response = await fetch(`/api/files/${fileId}`, { method: "DELETE" }) // Placeholder
+      const response = await fetch(`/api/files/${fileId}`, { method: "DELETE" });
       if (response.ok) {
-        setCardFiles(cardFiles.filter((f) => f.id !== fileId))
+        setCardFiles(cardFiles.filter((f) => f.id !== fileId));
       } else {
-        setError("Failed to remove file from database.")
+        setError("Failed to remove file from database.");
       }
     } catch (err) {
-      setError("An error occurred while removing file.")
-      console.error(err)
+      setError("An error occurred while removing file.");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Card className="animate-fade-in">
@@ -346,6 +338,7 @@ export function CardManagement() {
         )}
       </CardContent>
 
+      {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -360,40 +353,26 @@ export function CardManagement() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+            {/* Title */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="title" className="text-right">
                 Title
               </Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="col-span-3"
-                required
-              />
+              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="col-span-3" required />
             </div>
+            {/* Description */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">
                 Description
               </Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="col-span-3"
-              />
+              <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} className="col-span-3" />
             </div>
+            {/* Type */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="type" className="text-right">
                 Type
               </Label>
-              <Select
-                value={type}
-                onValueChange={(value) => {
-                  setType(value);
-                  setError("");
-                }}
-              >
+              <Select value={type} onValueChange={(value) => { setType(value); setError(""); }}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select card type" />
                 </SelectTrigger>
@@ -408,23 +387,15 @@ export function CardManagement() {
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
-
-
             </div>
+            {/* Progress */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="progress" className="text-right">
                 Progress (%)
               </Label>
-              <Input
-                id="progress"
-                type="number"
-                value={progress}
-                onChange={(e) => setProgress(Number.parseInt(e.target.value))}
-                className="col-span-3"
-                min={0}
-                max={100}
-              />
+              <Input id="progress" type="number" value={progress} onChange={(e) => setProgress(Number(e.target.value))} className="col-span-3" min={0} max={100} />
             </div>
+            {/* Assign To */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="assignedUser" className="text-right">
                 Assign To
@@ -444,7 +415,7 @@ export function CardManagement() {
               </Select>
             </div>
 
-            {/* Dynamic Card Details */}
+            {/* Card Details */}
             <div className="col-span-4 space-y-2">
               <div className="flex justify-between items-center">
                 <Label>Card Details</Label>
@@ -454,18 +425,8 @@ export function CardManagement() {
               </div>
               {cardDetails.map((detail, index) => (
                 <div key={index} className="grid grid-cols-4 items-center gap-2">
-                  <Input
-                    placeholder="Field Name (e.g., Username)"
-                    value={detail.field_name}
-                    onChange={(e) => handleDetailChange(index, "field_name", e.target.value)}
-                    className="col-span-1"
-                  />
-                  <Input
-                    placeholder="Field Value"
-                    value={detail.field_value}
-                    onChange={(e) => handleDetailChange(index, "field_value", e.target.value)}
-                    className="col-span-2"
-                  />
+                  <Input placeholder="Field Name (e.g., Username)" value={detail.field_name} onChange={(e) => handleDetailChange(index, "field_name", e.target.value)} className="col-span-1" />
+                  <Input placeholder="Field Value" value={detail.field_value} onChange={(e) => handleDetailChange(index, "field_value", e.target.value)} className="col-span-2" />
                   <Button type="button" variant="ghost" size="sm" onClick={() => removeDetailField(index)}>
                     <Trash className="h-4 w-4" />
                   </Button>
@@ -484,21 +445,14 @@ export function CardManagement() {
                   </div>
                 )}
                 <div className="space-y-2">
-                  {cardFiles.length === 0 && !uploading && (
-                    <p className="text-sm text-gray-500">No files uploaded for this card.</p>
-                  )}
+                  {cardFiles.length === 0 && !uploading && <p className="text-sm text-gray-500">No files uploaded for this card.</p>}
                   {cardFiles.map((file) => (
                     <div key={file.id} className="flex items-center justify-between rounded-md border p-2">
-                      <a
-                        href={file.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-blue-600 hover:underline"
-                      >
+                      <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
                         <FileText className="h-4 w-4" />
                         {file.file_name}
                       </a>
-                      <Button variant="ghost" size="sm" onClick={() => handleRemoveFile(file.id, file.file_url)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleRemoveFile(file.id)}>
                         <Trash className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
@@ -524,5 +478,5 @@ export function CardManagement() {
         </DialogContent>
       </Dialog>
     </Card>
-  )
+  );
 }
