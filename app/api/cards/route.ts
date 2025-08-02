@@ -62,8 +62,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Title is required" }, { status: 400 });
     }
     if (!type) {
-      return NextResponse.json({ message: "Please select item in the list" }, { status: 400 });
+      return NextResponse.json({ message: "Please select newbackend item in the list" }, { status: 400 });
     }
+
+    const assignedId = assignedUserId === "null" ? null : assignedUserId || null;
+
 
 
     const newCardResult = await sql`

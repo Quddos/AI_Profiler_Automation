@@ -161,54 +161,57 @@ export function CardManagement() {
     } finally {
       setLoading(false)
     }
- 
+
 
   }
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
-  // Validate card type before sending to backend
-  if (!type) {
-    setError("Please select item in the list");
-    setLoading(false);
-    return;
-  }
-
-  const method = currentCard ? "PUT" : "POST";
-  const url = currentCard ? `/api/cards/${currentCard.id}` : "/api/cards";
-
-  try {
-    const response = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        description,
-        type,
-        progress,
-        assignedUserId: assignedUserId === "null" ? null : assignedUserId ? Number.parseInt(assignedUserId) : null,
-        details: cardDetails,
-        files: cardFiles,
-      }),
-    });
-
-    if (response.ok) {
-      setIsModalOpen(false);
-      fetchCards();
-    } else {
-      const errorData = await response.json();
-      setError(errorData.message || `Failed to ${currentCard ? "update" : "create"} card.`);
+    // Validate card type before sending to backend
+    if (!type) {
+      setError("Please select newfrontend item in the list");
+      setLoading(false);
+      return;
     }
-  } catch (err) {
-    setError(`An error occurred while ${currentCard ? "updating" : "creating"} card.`);
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
+
+    const assignedId = assignedUserId === "null" ? null : assignedUserId ? Number.parseInt(assignedUserId) : null;
+
+
+    const method = currentCard ? "PUT" : "POST";
+    const url = currentCard ? `/api/cards/${currentCard.id}` : "/api/cards";
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          type,
+          progress,
+          assignedUserId: assignedUserId === "null" ? null : assignedUserId ? Number.parseInt(assignedUserId) : null,
+          details: cardDetails,
+          files: cardFiles,
+        }),
+      });
+
+      if (response.ok) {
+        setIsModalOpen(false);
+        fetchCards();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || `Failed to ${currentCard ? "update" : "create"} card.`);
+      }
+    } catch (err) {
+      setError(`An error occurred while ${currentCard ? "updating" : "creating"} card.`);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const handleDetailChange = (index: number, field: keyof CardDetail, value: string) => {
@@ -384,7 +387,13 @@ export function CardManagement() {
               <Label htmlFor="type" className="text-right">
                 Type
               </Label>
-              <Select value={type} onValueChange={(value) => setType(value)}>
+              <Select
+                value={type}
+                onValueChange={(value) => {
+                  setType(value);
+                  setError("");
+                }}
+              >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select card type" />
                 </SelectTrigger>
@@ -399,6 +408,7 @@ export function CardManagement() {
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
+
 
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
