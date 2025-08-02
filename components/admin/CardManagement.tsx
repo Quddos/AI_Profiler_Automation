@@ -161,12 +161,20 @@ export function CardManagement() {
     } finally {
       setLoading(false)
     }
+ 
+
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
+
+       if (!type) {
+      setError("Please select item in the list");
+      setLoading(false);
+      return;
+    }
 
     const method = currentCard ? "PUT" : "POST"
     const url = currentCard ? `/api/cards/${currentCard.id}` : "/api/cards"
@@ -223,7 +231,7 @@ export function CardManagement() {
     setError("")
 
     try {
-      const uploadedFiles = []
+      const uploadedFiles: { id: number; file_name: string; file_url: any }[] = []
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         const response = await fetch(`/api/upload?filename=${file.name}&cardId=${currentCard.id}`, {
@@ -374,7 +382,7 @@ export function CardManagement() {
               <Label htmlFor="type" className="text-right">
                 Type
               </Label>
-              <Select value={type} onValueChange={setType} required>
+              <Select value={type} onValueChange={(value) => setType(value)}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select card type" />
                 </SelectTrigger>
@@ -389,6 +397,7 @@ export function CardManagement() {
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
+
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="progress" className="text-right">
