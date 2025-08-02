@@ -4,12 +4,23 @@ import { getAuthenticatedAdmin } from "@/lib/server-auth";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    await getAuthenticatedAdmin();
     const sql = await initializeDatabase();
     const cardId = Number.parseInt(params.id);
-
     if (isNaN(cardId)) {
       return NextResponse.json({ message: "Invalid card ID" }, { status: 400 });
+    }
+
+    // Get user (admin or normal user)
+    let user = null;
+    try {
+      user = await getAuthenticatedAdmin();
+    } catch {
+      // Not admin, try as normal user
+      try {
+        user = await (await import("@/lib/server-auth")).getAuthenticatedUser();
+      } catch {
+        return NextResponse.json({ message: "Authentication required" }, { status: 403 });
+      }
     }
 
     const cardResult = await sql`
@@ -33,6 +44,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
 
     const card = cardResult[0];
+
+    // Only allow access if admin or assigned user
+    if (!user || (user.role !== "admin" && user.role !== "superadmin" && card.assigned_user_id !== user.id)) {
+      return NextResponse.json({ message: "Insufficient permissions" }, { status: 403 });
+    }
 
     const detailsResult = await sql`
       SELECT field_name, field_value, file_url FROM card_details WHERE card_id = ${cardId}
