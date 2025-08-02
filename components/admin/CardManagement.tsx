@@ -57,9 +57,9 @@ export function CardManagement() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<string | undefined>(undefined);
+  const [type, setType] = useState<string>("");
   const [progress, setProgress] = useState(0);
-  const [assignedUserId, setAssignedUserId] = useState<string | null>(null);
+  const [assignedUserId, setAssignedUserId] = useState<string>("");
   const [cardDetails, setCardDetails] = useState<CardDetail[]>([]);
   const [cardFiles, setCardFiles] = useState<{ id: number; file_name: string; file_url: string }[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -107,9 +107,9 @@ export function CardManagement() {
     setCurrentCard(null);
     setTitle("");
     setDescription("");
-    setType(undefined);
+    setType("");
     setProgress(0);
-    setAssignedUserId(null);
+    setAssignedUserId("");
     setCardDetails([]);
     setCardFiles([]);
     setIsModalOpen(true);
@@ -128,7 +128,7 @@ export function CardManagement() {
         setDescription(fullCard.description);
         setType(fullCard.type);
         setProgress(fullCard.progress);
-        setAssignedUserId(fullCard.assigned_user_id ? String(fullCard.assigned_user_id) : null);
+        setAssignedUserId(fullCard.assigned_user_id ? String(fullCard.assigned_user_id) : "");
         setCardDetails(fullCard.details || []);
         setCardFiles(fullCard.files || []);
         setIsModalOpen(true);
@@ -167,14 +167,12 @@ export function CardManagement() {
     setLoading(true);
     setError("");
 
-    if (!type) {
+    if (!type || type === "") {
       setError("Please select item in the list");
       setLoading(false);
       return;
     }
-
-    const assignedId =
-      assignedUserId === "null" ? null : assignedUserId ? Number(assignedUserId) : null;
+    const assignedId = assignedUserId === "null" || assignedUserId === "" ? null : Number(assignedUserId);
 
     const method = currentCard ? "PUT" : "POST";
     const url = currentCard ? `/api/cards/${currentCard.id}` : "/api/cards";
@@ -374,7 +372,7 @@ export function CardManagement() {
               </Label>
               <Select value={type} onValueChange={(value) => { setType(value); setError(""); }}>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select card type" />
+                  <SelectValue>{type ? type : "Select card type"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="LinkedIn">LinkedIn</SelectItem>
@@ -400,9 +398,13 @@ export function CardManagement() {
               <Label htmlFor="assignedUser" className="text-right">
                 Assign To
               </Label>
-              <Select value={assignedUserId || ""} onValueChange={setAssignedUserId}>
+              <Select value={assignedUserId} onValueChange={(value) => { setAssignedUserId(value); setError(""); }}>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select user (optional)" />
+                  <SelectValue>
+                    {assignedUserId && assignedUserId !== "null"
+                      ? users.find(u => String(u.id) === assignedUserId)?.name + " (" + users.find(u => String(u.id) === assignedUserId)?.email + ")"
+                      : "Select user (optional)"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="null">Unassigned</SelectItem>
