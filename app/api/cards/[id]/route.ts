@@ -1,111 +1,136 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { sql } from "@/lib/db"
-import { verifyToken } from "@/lib/auth"
+import { NextResponse } from "next/server"
+import { initializeDatabase } from "@/lib/db-init"
+import { getAuthenticatedAdmin } from "@/lib/server-auth"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const token = request.cookies.get("auth-token")?.value
-    const decoded = verifyToken(token)
-
-    if (!decoded) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
+    await getAuthenticatedAdmin() // Ensure only admins/superadmins can access
+    const sql = await initializeDatabase()
     const cardId = Number.parseInt(params.id)
 
-    const [card] = await sql`
-      SELECT c.*, u.name as assigned_user_name, u.email as assigned_user_email
+    if (isNaN(cardId)) {
+      return NextResponse.json({ message: "Invalid card ID" }, { status: 400 })
+    }
+
+    const cardResult = await sql`
+      SELECT 
+        c.id, 
+        c.title, 
+        c.description, 
+        c.type, 
+        c.progress, 
+        c.assigned_user_id,
+        c.created_at,
+        u.name as assigned_user_name,
+        u.email as assigned_user_email
       FROM cards c
       LEFT JOIN users u ON c.assigned_user_id = u.id
       WHERE c.id = ${cardId}
     `
 
-    if (!card) {
-      return NextResponse.json({ error: "Card not found" }, { status: 404 })
+    if (!cardResult || cardResult.length === 0) {
+      return NextResponse.json({ message: "Card not found" }, { status: 404 })
     }
 
-    // Check permissions
-    if (!["admin", "superadmin"].includes(decoded.role) && card.assigned_user_id !== decoded.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
-    }
+    const card = cardResult[0]
 
-    // Get card details
-    const details = await sql`
-      SELECT * FROM card_details WHERE card_id = ${cardId}
+    const detailsResult = await sql`
+      SELECT field_name, field_value, file_url FROM card_details WHERE card_id = ${cardId}
     `
+    card.details = detailsResult || []
 
-    // Get files
-    const files = await sql`
-      SELECT * FROM files WHERE card_id = ${cardId}
+    const filesResult = await sql`
+      SELECT id, file_name, file_url FROM files WHERE card_id = ${cardId}
     `
-
-    return NextResponse.json({
-      card: {
-        ...card,
-        details,
-        files,
-      },
-    })
-  } catch (error) {
-    console.error("Get card error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
-  }
-}
-
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const token = request.cookies.get("auth-token")?.value
-    const decoded = verifyToken(token)
-
-    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
-    }
-
-    const cardId = Number.parseInt(params.id)
-    const { title, description, type, assigned_user_id, progress } = await request.json()
-
-    const [card] = await sql`
-      UPDATE cards 
-      SET title = ${title}, description = ${description}, type = ${type}, 
-          assigned_user_id = ${assigned_user_id}, progress = ${progress}, 
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${cardId}
-      RETURNING *
-    `
-
-    if (!card) {
-      return NextResponse.json({ error: "Card not found" }, { status: 404 })
-    }
+    card.files = filesResult || []
 
     return NextResponse.json({ card })
-  } catch (error) {
-    console.error("Update card error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } catch (error: any) {
+    console.error("Error fetching card by ID:", error)
+    if (error.message === "Insufficient permissions" || error.message === "Authentication required") {
+      return NextResponse.json({ message: error.message }, { status: 403 })
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const token = request.cookies.get("auth-token")?.value
-    const decoded = verifyToken(token)
+    await getAuthenticatedAdmin() // Ensure only admins/superadmins can update
+    const sql = await initializeDatabase()
+    const cardId = Number.parseInt(params.id)
+    const { title, description, type, progress, assignedUserId, details, files } = await request.json()
 
-    if (!decoded || !["admin", "superadmin"].includes(decoded.role)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    if (isNaN(cardId)) {
+      return NextResponse.json({ message: "Invalid card ID" }, { status: 400 })
     }
 
-    const cardId = Number.parseInt(params.id)
-
-    const [deletedCard] = await sql`
-      DELETE FROM cards WHERE id = ${cardId} RETURNING id
+    await sql`
+      UPDATE cards
+      SET 
+        title = ${title}, 
+        description = ${description}, 
+        type = ${type}, 
+        progress = ${progress}, 
+        assigned_user_id = ${assignedUserId || null}
+      WHERE id = ${cardId}
     `
 
-    if (!deletedCard) {
-      return NextResponse.json({ error: "Card not found" }, { status: 404 })
+    // Update card details
+    await sql`DELETE FROM card_details WHERE card_id = ${cardId}`
+    if (details && details.length > 0) {
+      for (const detail of details) {
+        await sql`
+          INSERT INTO card_details (card_id, field_name, field_value, file_url)
+          VALUES (${cardId}, ${detail.field_name}, ${detail.field_value}, ${detail.file_url || null})
+        `
+      }
     }
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("Delete card error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    // Update files (assuming files are managed separately via upload API, here we just link them)
+    // For simplicity, this example assumes files are added/removed via a separate upload process
+    // and their links are passed here. A more robust solution would manage file lifecycle.
+    await sql`DELETE FROM files WHERE card_id = ${cardId}`
+    if (files && files.length > 0) {
+      for (const file of files) {
+        await sql`
+          INSERT INTO files (card_id, file_name, file_url)
+          VALUES (${cardId}, ${file.file_name}, ${file.file_url})
+        `
+      }
+    }
+
+    return NextResponse.json({ message: "Card updated successfully" })
+  } catch (error: any) {
+    console.error("Error updating card:", error)
+    if (error.message === "Insufficient permissions" || error.message === "Authentication required") {
+      return NextResponse.json({ message: error.message }, { status: 403 })
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  try {
+    await getAuthenticatedAdmin() // Ensure only admins/superadmins can delete
+    const sql = await initializeDatabase()
+    const cardId = Number.parseInt(params.id)
+
+    if (isNaN(cardId)) {
+      return NextResponse.json({ message: "Invalid card ID" }, { status: 400 })
+    }
+
+    // Delete associated details and files first
+    await sql`DELETE FROM card_details WHERE card_id = ${cardId}`
+    await sql`DELETE FROM files WHERE card_id = ${cardId}`
+    await sql`DELETE FROM cards WHERE id = ${cardId}`
+
+    return NextResponse.json({ message: "Card deleted successfully" })
+  } catch (error: any) {
+    console.error("Error deleting card:", error)
+    if (error.message === "Insufficient permissions" || error.message === "Authentication required") {
+      return NextResponse.json({ message: error.message }, { status: 403 })
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }

@@ -2,291 +2,216 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { FileText, LinkIcon, Key, Loader2, Trash, Download } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Upload, Download, FileText, Loader2 } from "lucide-react"
+
+interface CardDetail {
+  field_name: string
+  field_value: string
+  file_url?: string
+}
+
+interface CardFile {
+  id: number
+  file_name: string
+  file_url: string
+}
+
+interface CardData {
+  id: number
+  title: string
+  description: string
+  type: string
+  progress: number
+  assigned_user_id: number | null
+  details: CardDetail[]
+  files: CardFile[]
+}
 
 interface CardDetailModalProps {
-  card: any
+  card: CardData
   open: boolean
   onOpenChange: (open: boolean) => void
-  onUpdate: () => void
+  onUpdate: () => void // Callback to refresh cards after update
 }
 
 export function CardDetailModal({ card, open, onOpenChange, onUpdate }: CardDetailModalProps) {
+  const [currentCard, setCurrentCard] = useState<CardData>(card)
   const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState("")
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    setCurrentCard(card)
+  }, [card])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = e.target.files
+    if (!files || files.length === 0) return
 
     setUploading(true)
-    setUploadError("")
+    setError("")
 
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append("cardId", card.id.toString())
+      const uploadedFiles = []
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const response = await fetch(`/api/upload?filename=${file.name}&cardId=${currentCard.id}`, {
+          method: "POST",
+          body: file,
+        })
 
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (response.ok) {
-        onUpdate()
-        // Reset file input
-        e.target.value = ""
-      } else {
-        const data = await response.json()
-        setUploadError(data.error || "Upload failed")
+        if (response.ok) {
+          const blob = await response.json()
+          uploadedFiles.push({ id: Date.now() + i, file_name: file.name, file_url: blob.url })
+        } else {
+          const errorData = await response.json()
+          setError(`Failed to upload ${file.name}: ${errorData.message || "Unknown error"}`)
+          break // Stop on first error
+        }
       }
-    } catch (error) {
-      setUploadError("Upload failed")
+      setCurrentCard((prev) => ({
+        ...prev,
+        files: [...prev.files, ...uploadedFiles],
+      }))
+      onUpdate() // Refresh parent component's card list
+    } catch (err) {
+      setError("An error occurred during file upload.")
+      console.error(err)
     } finally {
       setUploading(false)
     }
   }
 
-  const getCardIcon = (type: string) => {
-    switch (type) {
-      case "LinkedIn":
-        return "💼"
-      case "TEFL Certificate":
-        return "📜"
-      case "Bachelor Degree":
-        return "🎓"
-      case "University Applied":
-        return "🏫"
-      case "Internships":
-        return "💼"
-      case "Recommendation":
-        return "⭐"
-      case "Profile Details":
-        return "👤"
-      default:
-        return "📄"
+  const handleRemoveFile = async (fileId: number, fileUrl: string) => {
+    if (!confirm("Are you sure you want to remove this file?")) return
+    setError("")
+    try {
+      // Assuming a DELETE endpoint for files, or handling removal via card update
+      // For simplicity, we'll just remove it from the state and rely on card update to sync
+      // A real app would have a dedicated /api/files/[id] DELETE endpoint
+      const response = await fetch(`/api/files/${fileId}`, { method: "DELETE" }) // Placeholder
+      if (response.ok) {
+        setCurrentCard((prev) => ({
+          ...prev,
+          files: prev.files.filter((f) => f.id !== fileId),
+        }))
+        onUpdate()
+      } else {
+        setError("Failed to remove file from database.")
+      }
+    } catch (err) {
+      setError("An error occurred while removing file.")
+      console.error(err)
     }
   }
 
-  const getProgressColor = (progress: number) => {
-    if (progress >= 80) return "text-green-600"
-    if (progress >= 50) return "text-yellow-600"
-    return "text-red-600"
-  }
-
-  const renderCardDetails = () => {
-    switch (card.type) {
-      case "LinkedIn":
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label>LinkedIn Username</Label>
-              <Input placeholder="Enter your LinkedIn username" />
-            </div>
-            <div>
-              <Label>Profile URL</Label>
-              <Input placeholder="https://linkedin.com/in/username" />
-            </div>
-            <div>
-              <Label>Password</Label>
-              <Input type="password" placeholder="Enter password" />
-            </div>
-          </div>
-        )
-      case "TEFL Certificate":
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label>Certificate Number</Label>
-              <Input placeholder="Enter certificate number" />
-            </div>
-            <div>
-              <Label>Verification URL</Label>
-              <Input placeholder="https://teachersrecord.com/verify" />
-            </div>
-            <div>
-              <Label>Issue Date</Label>
-              <Input type="date" />
-            </div>
-          </div>
-        )
-      case "Bachelor Degree":
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label>Degree Title</Label>
-              <Input placeholder="Bachelor of Science in Computer Science" />
-            </div>
-            <div>
-              <Label>University</Label>
-              <Input placeholder="University name" />
-            </div>
-            <div>
-              <Label>Graduation Year</Label>
-              <Input type="number" placeholder="2023" />
-            </div>
-            <div>
-              <Label>GPA</Label>
-              <Input placeholder="3.8/4.0" />
-            </div>
-          </div>
-        )
-      default:
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label>Additional Information</Label>
-              <Input placeholder="Enter relevant details" />
-            </div>
-          </div>
-        )
-    }
+  const getDetailIcon = (fieldName: string) => {
+    const lowerCaseName = fieldName.toLowerCase()
+    if (lowerCaseName.includes("link") || lowerCaseName.includes("url"))
+      return <LinkIcon className="h-4 w-4 text-blue-500" />
+    if (lowerCaseName.includes("password") || lowerCaseName.includes("credential"))
+      return <Key className="h-4 w-4 text-yellow-500" />
+    if (lowerCaseName.includes("document") || lowerCaseName.includes("certificate") || lowerCaseName.includes("degree"))
+      return <FileText className="h-4 w-4 text-green-500" />
+    return <FileText className="h-4 w-4 text-gray-500" />
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center space-x-3">
-            <span className="text-3xl">{getCardIcon(card.type)}</span>
-            <div>
-              <DialogTitle className="text-2xl">{card.title}</DialogTitle>
-              <DialogDescription className="flex items-center space-x-2">
-                <Badge variant="outline">{card.type}</Badge>
-                <span className={`font-bold ${getProgressColor(card.progress)}`}>{card.progress}% Complete</span>
-              </DialogDescription>
-            </div>
-          </div>
+          <DialogTitle>{currentCard.title}</DialogTitle>
+          <DialogDescription>{currentCard.description || "No description provided."}</DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Label className="text-sm font-medium">Completion Progress</Label>
-              <span className={`text-sm font-bold ${getProgressColor(card.progress)}`}>{card.progress}%</span>
+        <div className="grid gap-4 py-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <div className="flex items-center justify-between">
+            <Label>Type:</Label>
+            <span className="font-medium">{currentCard.type}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Progress:</Label>
+            <div className="flex items-center gap-2">
+              <Progress value={currentCard.progress} className="w-[100px]" />
+              <span className="font-medium">{currentCard.progress}%</span>
             </div>
-            <Progress value={card.progress} className="h-3" />
           </div>
 
-          {/* Description */}
-          {card.description && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">{card.description}</p>
-              </CardContent>
-            </Card>
+          {currentCard.details && currentCard.details.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-lg font-semibold">Details:</h4>
+              {currentCard.details.map((detail, index) => (
+                <div key={index} className="flex items-center gap-2 rounded-md border p-2">
+                  {getDetailIcon(detail.field_name)}
+                  <Label className="font-medium">{detail.field_name}:</Label>
+                  {detail.file_url ? (
+                    <a
+                      href={detail.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline flex-1"
+                    >
+                      {detail.field_value || "View Document"}
+                    </a>
+                  ) : (
+                    <span className="flex-1">{detail.field_value}</span>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
 
-          {/* Tabs for Details and Files */}
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="files">Files ({card.files?.length || 0})</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="details" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Card Information</CardTitle>
-                  <CardDescription>Fill in the required information for this card</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {renderCardDetails()}
-                  <div className="mt-6">
-                    <Button className="w-full animate-pulse-yellow">Save Information</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="files" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">File Upload</CardTitle>
-                  <CardDescription>Upload documents and files related to this card</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <div className="space-y-2">
-                        <Label htmlFor="file-upload" className="cursor-pointer">
-                          <span className="text-blue-600 hover:text-blue-500">Click to upload files</span>
-                          <span className="text-gray-500"> or drag and drop</span>
-                        </Label>
-                        <Input
-                          id="file-upload"
-                          type="file"
-                          className="hidden"
-                          onChange={handleFileUpload}
-                          disabled={uploading}
-                        />
-                        <p className="text-xs text-gray-500">PDF, DOC, DOCX, JPG, PNG up to 10MB</p>
-                      </div>
-                    </div>
-
-                    {uploading && (
-                      <div className="flex items-center justify-center space-x-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Uploading...</span>
-                      </div>
-                    )}
-
-                    {uploadError && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{uploadError}</AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Uploaded Files */}
-              {card.files && card.files.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Uploaded Files</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {card.files.map((file: any) => (
-                        <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <FileText className="h-5 w-5 text-blue-600" />
-                            <div>
-                              <p className="font-medium">{file.file_name}</p>
-                              <p className="text-sm text-gray-500">{new Date(file.created_at).toLocaleDateString()}</p>
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={file.file_url} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </a>
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+          <div className="space-y-2">
+            <h4 className="text-lg font-semibold">Uploaded Files:</h4>
+            <Input type="file" multiple onChange={handleFileUpload} disabled={uploading} />
+            {uploading && (
+              <div className="flex items-center text-sm text-gray-500">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading files...
+              </div>
+            )}
+            <div className="space-y-2">
+              {currentCard.files.length === 0 && !uploading && (
+                <p className="text-sm text-gray-500">No files uploaded for this card yet.</p>
               )}
-            </TabsContent>
-          </Tabs>
+              {currentCard.files.map((file) => (
+                <div key={file.id} className="flex items-center justify-between rounded-md border p-2">
+                  <a
+                    href={file.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-blue-600 hover:underline"
+                  >
+                    <Download className="h-4 w-4" />
+                    {file.file_name}
+                  </a>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveFile(file.id, file.file_url)}>
+                    <Trash className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

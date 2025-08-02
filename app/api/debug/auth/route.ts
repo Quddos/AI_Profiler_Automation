@@ -1,41 +1,30 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { getUserByEmail, verifyPassword } from "@/lib/auth"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { email, password } = await request.json()
 
-    console.log("=== DEBUG AUTH ===")
-    console.log("Email:", email)
-    console.log("Password:", password)
-
     const user = await getUserByEmail(email)
-    console.log("User found:", !!user)
+    const userFound = !!user
+    let passwordValid = false
+    let hashType = "N/A"
 
     if (user) {
-      console.log("User ID:", user.id)
-      console.log("User name:", user.name)
-      console.log("User role:", user.role)
-      console.log("Stored password:", user.password_hash)
-
-      const isValid = await verifyPassword(password, user.password_hash)
-      console.log("Password valid:", isValid)
-
-      return NextResponse.json({
-        userFound: !!user,
-        passwordValid: isValid,
-        storedPassword: user.password_hash,
-        providedPassword: password,
-        hashType: "plain text",
-      })
+      passwordValid = await verifyPassword(password, user.password_hash)
+      hashType = user.password_hash.startsWith("$2a$") ? "bcrypt" : "plaintext"
     }
 
     return NextResponse.json({
-      userFound: false,
-      passwordValid: false,
+      userFound,
+      passwordValid,
+      hashType,
+      email,
+      providedPassword: password,
+      storedHash: user ? user.password_hash : "N/A",
     })
   } catch (error) {
     console.error("Debug auth error:", error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
 }

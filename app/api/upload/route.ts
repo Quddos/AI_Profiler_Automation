@@ -1,53 +1,59 @@
-import { type NextRequest, NextResponse } from "next/server"
 import { put } from "@vercel/blob"
-import { sql } from "@/lib/db"
-import { verifyToken } from "@/lib/auth"
+import { NextResponse } from "next/server"
+import { initializeDatabase } from "@/lib/db-init"
+import { getAuthenticatedUser } from "@/lib/server-auth"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const token = request.cookies.get("auth-token")?.value
-    const decoded = verifyToken(token)
+    const user = await getAuthenticatedUser() // Ensure user is authenticated
+    const { searchParams } = new URL(request.url)
+    const filename = searchParams.get("filename")
+    const cardId = searchParams.get("cardId")
 
-    if (!decoded) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!filename) {
+      return NextResponse.json({ message: "Filename is required" }, { status: 400 })
+    }
+    if (!request.body) {
+      return NextResponse.json({ message: "Request body is empty" }, { status: 400 })
     }
 
-    const formData = await request.formData()
-    const file = formData.get("file") as File
-    const cardId = formData.get("cardId") as string
-
-    if (!file || !cardId) {
-      return NextResponse.json({ error: "File and cardId are required" }, { status: 400 })
-    }
-
-    // Check if user has access to this card
-    const [card] = await sql`
-      SELECT * FROM cards WHERE id = ${Number.parseInt(cardId)}
-    `
-
-    if (!card) {
-      return NextResponse.json({ error: "Card not found" }, { status: 404 })
-    }
-
-    if (!["admin", "superadmin"].includes(decoded.role) && card.assigned_user_id !== decoded.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
-    }
-
-    // Upload to Vercel Blob
-    const blob = await put(file.name, file, {
+    const blob = await put(filename, request.body, {
       access: "public",
     })
 
-    // Save file record to database
-    const [fileRecord] = await sql`
-      INSERT INTO files (card_id, file_name, file_url, file_size, mime_type, uploaded_by)
-      VALUES (${Number.parseInt(cardId)}, ${file.name}, ${blob.url}, ${file.size}, ${file.type}, ${decoded.id})
-      RETURNING *
-    `
+    if (cardId) {
+      const sql = await initializeDatabase()
+      const parsedCardId = Number.parseInt(cardId)
+      if (isNaN(parsedCardId)) {
+        return NextResponse.json({ message: "Invalid cardId" }, { status: 400 })
+      }
 
-    return NextResponse.json({ file: fileRecord })
-  } catch (error) {
-    console.error("Upload error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+      // Check if the card belongs to the user or if user is admin/superadmin
+      const cardOwnerCheck = await sql`
+        SELECT assigned_user_id FROM cards WHERE id = ${parsedCardId}
+      `
+      if (cardOwnerCheck.length === 0) {
+        return NextResponse.json({ message: "Card not found" }, { status: 404 })
+      }
+      const ownerId = cardOwnerCheck[0].assigned_user_id
+
+      if (ownerId !== user.id && !["admin", "superadmin"].includes(user.role)) {
+        return NextResponse.json({ message: "Unauthorized to upload to this card" }, { status: 403 })
+      }
+
+      // Store file metadata in the database
+      await sql`
+        INSERT INTO files (card_id, file_name, file_url)
+        VALUES (${parsedCardId}, ${filename}, ${blob.url})
+      `
+    }
+
+    return NextResponse.json(blob)
+  } catch (error: any) {
+    console.error("Error uploading file:", error)
+    if (error.message === "Authentication required") {
+      return NextResponse.json({ message: error.message }, { status: 401 })
+    }
+    return NextResponse.json({ message: "Failed to upload file" }, { status: 500 })
   }
 }

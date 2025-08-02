@@ -1,35 +1,30 @@
 import "server-only"
+import { getCurrentUser, deleteSession } from "@/lib/auth"
 import { cookies } from "next/headers"
-import { verifyToken, getUserById } from "./auth"
+import { redirect } from "next/navigation"
 
-export async function getCurrentUser() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get("auth-token")?.value
-
-  if (!token) {
-    return null
-  }
-
-  const decoded = verifyToken(token)
-  if (!decoded) {
-    return null
-  }
-
-  return getUserById(decoded.id)
-}
-
-export async function requireAuth() {
+export async function getAuthenticatedUser() {
   const user = await getCurrentUser()
   if (!user) {
-    throw new Error("Authentication required")
+    redirect("/login")
   }
   return user
 }
 
-export async function requireRole(allowedRoles: string[]) {
-  const user = await requireAuth()
-  if (!allowedRoles.includes(user.role)) {
-    throw new Error("Insufficient permissions")
+export async function getAuthenticatedAdmin() {
+  const user = await getCurrentUser()
+  if (!user || !["admin", "superadmin"].includes(user.role)) {
+    redirect("/dashboard") // Redirect to user dashboard if not admin/superadmin
   }
   return user
+}
+
+export async function logoutUser() {
+  const cookieStore = cookies()
+  const sessionId = cookieStore.get("session-id")?.value
+  if (sessionId) {
+    await deleteSession(sessionId)
+    cookieStore.delete("session-id")
+  }
+  redirect("/login")
 }
