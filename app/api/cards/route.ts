@@ -58,9 +58,13 @@ export async function POST(request: Request) {
     const sql = await initializeDatabase()
     const { title, description, type, progress, assignedUserId, details } = await request.json()
 
-    if (!title || !type) {
-      return NextResponse.json({ message: "Title and type are required" }, { status: 400 })
+    if (!title) {
+      return NextResponse.json({ message: "Title is required" }, { status: 400 });
     }
+    if (!type) {
+      return NextResponse.json({ message: "Please select item in the list" }, { status: 400 });
+    }
+
 
     const newCardResult = await sql`
       INSERT INTO cards (title, description, type, progress, assigned_user_id)

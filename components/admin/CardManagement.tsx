@@ -165,49 +165,51 @@ export function CardManagement() {
 
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-       if (!type) {
-      setError("Please select item in the list");
-      setLoading(false);
-      return;
-    }
-
-    const method = currentCard ? "PUT" : "POST"
-    const url = currentCard ? `/api/cards/${currentCard.id}` : "/api/cards"
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description,
-          type,
-          progress,
-          assignedUserId: assignedUserId ? Number.parseInt(assignedUserId) : null,
-          details: cardDetails,
-          files: cardFiles, // Pass existing files, new files are handled by upload
-        }),
-      })
-
-      if (response.ok) {
-        setIsModalOpen(false)
-        fetchCards()
-      } else {
-        const errorData = await response.json()
-        setError(errorData.message || `Failed to ${currentCard ? "update" : "create"} card.`)
-      }
-    } catch (err) {
-      setError(`An error occurred while ${currentCard ? "updating" : "creating"} card.`)
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+  // Validate card type before sending to backend
+  if (!type) {
+    setError("Please select item in the list");
+    setLoading(false);
+    return;
   }
+
+  const method = currentCard ? "PUT" : "POST";
+  const url = currentCard ? `/api/cards/${currentCard.id}` : "/api/cards";
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        description,
+        type,
+        progress,
+        assignedUserId: assignedUserId === "null" ? null : assignedUserId ? Number.parseInt(assignedUserId) : null,
+        details: cardDetails,
+        files: cardFiles,
+      }),
+    });
+
+    if (response.ok) {
+      setIsModalOpen(false);
+      fetchCards();
+    } else {
+      const errorData = await response.json();
+      setError(errorData.message || `Failed to ${currentCard ? "update" : "create"} card.`);
+    }
+  } catch (err) {
+    setError(`An error occurred while ${currentCard ? "updating" : "creating"} card.`);
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleDetailChange = (index: number, field: keyof CardDetail, value: string) => {
     const newDetails = [...cardDetails]
