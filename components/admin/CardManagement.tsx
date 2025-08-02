@@ -370,22 +370,23 @@ export function CardManagement() {
               <Label htmlFor="type" className="text-right">
                 Type
               </Label>
-              <Select value={type} onValueChange={(value) => { setType(value); setError(""); }}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue>{type ? type : "Select card type"}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="" disabled>Select card type</SelectItem>
-                  <SelectItem value="LinkedIn">LinkedIn</SelectItem>
-                  <SelectItem value="TEFL Certificate">TEFL Certificate</SelectItem>
-                  <SelectItem value="Bachelor Degree">Bachelor Degree</SelectItem>
-                  <SelectItem value="University Applied">University Applied</SelectItem>
-                  <SelectItem value="Internships">Internships</SelectItem>
-                  <SelectItem value="Recommendation">Recommendation</SelectItem>
-                  <SelectItem value="User Profile Details">User Profile Details</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                id="type"
+                value={type}
+                onChange={e => { setType(e.target.value); setError(""); }}
+                className="col-span-3 border rounded-md px-3 py-2 text-sm"
+                required
+              >
+                <option value="">Select card type</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="TEFL Certificate">TEFL Certificate</option>
+                <option value="Bachelor Degree">Bachelor Degree</option>
+                <option value="University Applied">University Applied</option>
+                <option value="Internships">Internships</option>
+                <option value="Recommendation">Recommendation</option>
+                <option value="User Profile Details">User Profile Details</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
             {/* Progress */}
             <div className="grid grid-cols-4 items-center gap-4">
@@ -399,24 +400,20 @@ export function CardManagement() {
               <Label htmlFor="assignedUser" className="text-right">
                 Assign To
               </Label>
-              <Select value={assignedUserId} onValueChange={(value) => { setAssignedUserId(value); setError(""); }}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue>
-                    {assignedUserId && assignedUserId !== "null"
-                      ? users.find(u => String(u.id) === assignedUserId)?.name + " (" + users.find(u => String(u.id) === assignedUserId)?.email + ")"
-                      : "Select user (optional)"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="" disabled>Select user (optional)</SelectItem>
-                  <SelectItem value="null">Unassigned</SelectItem>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={String(user.id)}>
-                      {user.name} ({user.email})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                id="assignedUser"
+                value={assignedUserId}
+                onChange={e => { setAssignedUserId(e.target.value); setError(""); }}
+                className="col-span-3 border rounded-md px-3 py-2 text-sm"
+              >
+                <option value="">Select user (optional)</option>
+                <option value="null">Unassigned</option>
+                {users.map(user => (
+                  <option key={user.id} value={String(user.id)}>
+                    {user.name} ({user.email})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Card Details */}
