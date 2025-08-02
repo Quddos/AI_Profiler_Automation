@@ -65,7 +65,7 @@ export function CardDetailModal({ card, open, onOpenChange, onUpdate }: CardDeta
     setError("")
 
     try {
-      const uploadedFiles = []
+      const uploadedFiles: CardFile[] = []
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         const response = await fetch(`/api/upload?filename=${file.name}&cardId=${currentCard.id}`, {
@@ -129,6 +129,14 @@ export function CardDetailModal({ card, open, onOpenChange, onUpdate }: CardDeta
     return <FileText className="h-4 w-4 text-gray-500" />
   }
 
+  // Find the first detail that looks like a URL
+  const mainUrlDetail = currentCard.details?.find(
+    (detail) =>
+      detail.field_value &&
+      (detail.field_name.toLowerCase().includes("url") || detail.field_name.toLowerCase().includes("link")) &&
+      (detail.field_value.startsWith("http://") || detail.field_value.startsWith("https://"))
+  )
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -154,27 +162,52 @@ export function CardDetailModal({ card, open, onOpenChange, onUpdate }: CardDeta
             </div>
           </div>
 
+          {/* Go to Profile button if URL exists */}
+          {mainUrlDetail && (
+            <div className="flex justify-end mb-2">
+              <Button asChild variant="outline" size="sm">
+                <a href={mainUrlDetail.field_value} target="_blank" rel="noopener noreferrer">
+                  Go to Profile
+                </a>
+              </Button>
+            </div>
+          )}
+
           {currentCard.details && currentCard.details.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-lg font-semibold">Details:</h4>
-              {currentCard.details.map((detail, index) => (
-                <div key={index} className="flex items-center gap-2 rounded-md border p-2">
-                  {getDetailIcon(detail.field_name)}
-                  <Label className="font-medium">{detail.field_name}:</Label>
-                  {detail.file_url ? (
-                    <a
-                      href={detail.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline flex-1"
-                    >
-                      {detail.field_value || "View Document"}
-                    </a>
-                  ) : (
-                    <span className="flex-1">{detail.field_value}</span>
-                  )}
-                </div>
-              ))}
+              {currentCard.details.map((detail, index) => {
+                const isUrl =
+                  detail.field_value &&
+                  (detail.field_value.startsWith("http://") || detail.field_value.startsWith("https://"))
+                return (
+                  <div key={index} className="flex items-center gap-2 rounded-md border p-2">
+                    {getDetailIcon(detail.field_name)}
+                    <Label className="font-medium">{detail.field_name}:</Label>
+                    {isUrl ? (
+                      <a
+                        href={detail.field_value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline flex-1"
+                      >
+                        {detail.field_value}
+                      </a>
+                    ) : detail.file_url ? (
+                      <a
+                        href={detail.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline flex-1"
+                      >
+                        {detail.field_value || "View Document"}
+                      </a>
+                    ) : (
+                      <span className="flex-1">{detail.field_value}</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
 
