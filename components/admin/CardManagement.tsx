@@ -375,6 +375,7 @@ export function CardManagement() {
                   <SelectValue>{type ? type : "Select card type"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="" disabled>Select card type</SelectItem>
                   <SelectItem value="LinkedIn">LinkedIn</SelectItem>
                   <SelectItem value="TEFL Certificate">TEFL Certificate</SelectItem>
                   <SelectItem value="Bachelor Degree">Bachelor Degree</SelectItem>
@@ -407,6 +408,7 @@ export function CardManagement() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="" disabled>Select user (optional)</SelectItem>
                   <SelectItem value="null">Unassigned</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={String(user.id)}>
