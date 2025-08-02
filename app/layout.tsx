@@ -11,7 +11,8 @@ export const metadata: Metadata = {
   description: "Role-Based Profile Management Dashboard",
   manifest: "/manifest.json",
   icons: {
-    apple: "/icon-192x192.png",
+    icon: "/favicon.ico",
+    apple: "/favicon.ico",
   },
   themeColor: "#FCD34D", // yellow-400
     generator: 'v0.dev'
@@ -26,6 +27,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+          <header className="w-full flex items-center justify-center py-4 bg-white/80 border-b border-yellow-200">
+            <img src="/logo.png" alt="App Logo" className="h-12 w-12 mr-2" />
+            <span className="text-2xl font-bold text-blue-800">ProfileDash</span>
+          </header>
           {children}
         </ThemeProvider>
       </body>
